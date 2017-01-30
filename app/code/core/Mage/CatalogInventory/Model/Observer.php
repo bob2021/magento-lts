@@ -737,17 +737,31 @@ class Mage_CatalogInventory_Model_Observer
             }
         }
 
-        if (count($productIds)) {
-            Mage::getResourceSingleton('cataloginventory/indexer_stock')->reindexProducts($productIds);
+        // @todo should check if indexers are in manual mode?
+
+        if ($productIds) {
+            $stockIndexProcess = Mage::getModel('index/process')->load('cataloginventory_stock', 'indexer_code');
+            $stockIndexProcess->lock();
+            try {
+                Mage::getResourceSingleton('cataloginventory/indexer_stock')->reindexProducts($productIds);
+                $stockIndexProcess->unlock();
+            } catch (Exception $e) {
+                $stockIndexProcess->unlock();
+                throw $e;
+            }
+
+            $priceIndexProcess = Mage::getModel('index/process')->load('catalog_product_price', 'indexer_code');
+            $priceIndexProcess->lock();
+            try {
+                Mage::getResourceSingleton('catalog/product_indexer_price')->reindexProductIds($productIds);
+                $priceIndexProcess->unlock();
+            } catch (Exception $e) {
+                $priceIndexProcess->unlock();
+                throw $e;
+            }
         }
 
-        // Reindex previously remembered items
-        $productIds = array();
-        foreach ($this->_itemsForReindex as $item) {
-            $item->save();
-            $productIds[] = $item->getProductId();
-        }
-        Mage::getResourceSingleton('catalog/product_indexer_price')->reindexProductIds($productIds);
+        // @todo clear block cache?
 
         $this->_itemsForReindex = array(); // Clear list of remembered items - we don't need it anymore
 

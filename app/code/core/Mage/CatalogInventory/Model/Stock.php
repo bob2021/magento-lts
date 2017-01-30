@@ -136,6 +136,7 @@ class Mage_CatalogInventory_Model_Stock extends Mage_Core_Model_Abstract
         $item = Mage::getModel('cataloginventory/stock_item');
         $this->_getResource()->beginTransaction();
         $stockInfo = $this->_getResource()->getProductsStock($this, array_keys($qtys), true);
+        $stockStatusIds = array();
         $fullSaveItems = array();
         foreach ($stockInfo as $itemInfo) {
             $item->setData($itemInfo);
@@ -144,12 +145,17 @@ class Mage_CatalogInventory_Model_Stock extends Mage_Core_Model_Abstract
                 Mage::throwException(Mage::helper('cataloginventory')->__('Not all products are available in the requested quantity'));
             }
             $item->subtractQty($qtys[$item->getProductId()]);
+            if (!$item->verifyStock()) {
+                $stockStatusIds[] = $item->getProductId();
+            }
             if (!$item->verifyStock() || $item->verifyNotification()) {
                 $fullSaveItems[] = clone $item;
             }
         }
         $this->_getResource()->correctItemsQty($this, $qtys, '-');
+        $this->_getResource()->updateIsInStock($this, $stockStatusIds, Mage_CatalogInventory_Model_Stock_Status::STATUS_OUT_OF_STOCK);
         $this->_getResource()->commit();
+        // @todo $fullSaveItems no longer used
         return $fullSaveItems;
     }
 

@@ -188,6 +188,41 @@ class Mage_CatalogInventory_Model_Resource_Stock extends Mage_Core_Model_Resourc
     }
 
     /**
+     * Update is_in_stock field
+     *
+     * @param Mage_CatalogInventory_Model_Stock $stock
+     * @param array $productIds
+     * @param string $status
+     * @return Mage_CatalogInventory_Model_Resource_Stock
+     */
+    public function updateIsInStock($stock, $productIds, $status)
+    {
+        if (empty($productIds)) {
+            return $this;
+        }
+
+        $adapter = $this->_getWriteAdapter();
+
+        $adapter->beginTransaction();
+        try {
+            $adapter->update(
+                $this->getTable('cataloginventory/stock_item'),
+                array('is_in_stock' => $status),
+                array(
+                    'product_id IN (?)' => $productIds,
+                    'stock_id = ?'      => $stock->getId()
+                )
+            );
+            $adapter->commit();
+        } catch (Exception $e) {
+            $adapter->rollBack();
+            throw $e;
+        }
+
+        return $this;
+    }
+
+    /**
      * add join to select only in stock products
      *
      * @param Mage_Catalog_Model_Resource_Product_Link_Product_Collection $collection
