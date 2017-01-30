@@ -205,6 +205,17 @@ class Mage_Catalog_Model_Resource_Product_Indexer_Price extends Mage_Index_Model
     }
 
     /**
+     * Process stock item save
+     *
+     * @param Mage_Index_Model_Event $event
+     * @return Mage_Catalog_Model_Resource_Product_Indexer_Price
+     */
+    public function cataloginventoryStockItemSave(Mage_Index_Model_Event $event)
+    {
+        return $this->catalogProductMassAction($event);
+    }
+
+    /**
      * Process product mass update action
      *
      * @param Mage_Index_Model_Event $event

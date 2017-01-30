@@ -1002,18 +1002,6 @@ class Mage_CatalogInventory_Model_Observer
     }
 
     /**
-     * Reindex all events of product-massAction type
-     *
-     * @param Varien_Event_Observer $observer
-     */
-    public function reindexProductsMassAction($observer)
-    {
-        Mage::getSingleton('index/indexer')->indexEvents(
-            Mage_Catalog_Model_Product::ENTITY, Mage_Index_Model_Event::TYPE_MASS_ACTION
-        );
-    }
-
-    /**
      * Detects whether product status should be shown
      *
      * @param Varien_Event_Observer $observer

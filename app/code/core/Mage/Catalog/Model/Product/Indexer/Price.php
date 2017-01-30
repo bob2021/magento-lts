@@ -82,6 +82,9 @@ class Mage_Catalog_Model_Product_Indexer_Price extends Mage_Index_Model_Indexer_
         ),
         Mage_Customer_Model_Group::ENTITY => array(
             Mage_Index_Model_Event::TYPE_SAVE
+        ),
+        Mage_CatalogInventory_Model_Stock_Item::ENTITY => array(
+            Mage_Index_Model_Event::TYPE_SAVE
         )
     );
 
@@ -277,6 +280,16 @@ class Mage_Catalog_Model_Product_Indexer_Price extends Mage_Index_Model_Indexer_
             $indexers = $this->_getResource()->getTypeIndexers();
             foreach ($indexers as $indexer) {
                 $indexer->registerEvent($event);
+            }
+        } else if ($entity == Mage_CatalogInventory_Model_Stock_Item::ENTITY) {
+            if (!Mage::helper('cataloginventory')->isShowOutOfStock() && !$event->getDataObject()->getProduct()) {
+                $event->addNewData('reindex_price_product_ids', array($event->getDataObject()->getProductId()));
+
+                // call product type indexers registerEvent
+                $indexers = $this->_getResource()->getTypeIndexers();
+                foreach ($indexers as $indexer) {
+                    $indexer->registerEvent($event);
+                }
             }
         }
     }
