@@ -255,6 +255,9 @@ abstract class Mage_Index_Model_Resource_Abstract extends Mage_Core_Model_Resour
      */
     public function disableTableKeys()
     {
+        // disable table keys statements - they only work with myisam, which isn't used here
+        return $this;
+
         if ($this->useDisableKeys()) {
             $this->_getWriteAdapter()->disableTableKeys($this->getMainTable());
         }
@@ -268,6 +271,9 @@ abstract class Mage_Index_Model_Resource_Abstract extends Mage_Core_Model_Resour
      */
     public function enableTableKeys()
     {
+        // disable table keys statements - they only work with myisam, which isn't used here
+        return $this;
+
         if ($this->useDisableKeys()) {
             $this->_getWriteAdapter()->enableTableKeys($this->getMainTable());
         }

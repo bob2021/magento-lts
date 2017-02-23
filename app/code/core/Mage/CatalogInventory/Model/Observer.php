@@ -585,7 +585,7 @@ class Mage_CatalogInventory_Model_Observer
         $qty = $itemQty;
         if (isset($this->_checkedQuoteItems[$productId]['qty']) &&
             !in_array($quoteItemId, $this->_checkedQuoteItems[$productId]['items'])) {
-                $qty += $this->_checkedQuoteItems[$productId]['qty'];
+            $qty += $this->_checkedQuoteItems[$productId]['qty'];
         }
 
         $this->_checkedQuoteItems[$productId]['qty'] = $qty;
@@ -723,6 +723,8 @@ class Mage_CatalogInventory_Model_Observer
      */
     public function reindexQuoteInventory($observer)
     {
+        // NB. throwing an exception here will result in a completed order but the inventory will be rolled back
+
         // Reindex quote ids
         $quote = $observer->getEvent()->getQuote();
         $productIds = array();
@@ -736,17 +738,63 @@ class Mage_CatalogInventory_Model_Observer
             }
         }
 
-        if (count($productIds)) {
-            Mage::getResourceSingleton('cataloginventory/indexer_stock')->reindexProducts($productIds);
+        // update stock status
+        $stockResource = Mage::getResourceSingleton('cataloginventory/stock');
+        $stockStatusProductIds = array();
+        $lowStockDateProductIds = array();
+
+        foreach ($this->_itemsForReindex as $item) {
+            if ($item->getIsInStock() && !$item->verifyStock()) {
+                $stockStatusProductIds[] = $item->getProductId();
+            }
+
+            if ($item->verifyNotification()) {
+                $lowStockDateProductIds[] = $item->getProductId();
+            }
         }
 
-        // Reindex previously remembered items
-        $productIds = array();
-        foreach ($this->_itemsForReindex as $item) {
-            $item->save();
-            $productIds[] = $item->getProductId();
+        try {
+            // NB. $this->_itemsForReindex has already been filtered against Mage::helper('catalogInventory')->isQty($typeId);
+            if ($stockStatusProductIds) {
+                $stockResource->updateSetOutOfStock($stockStatusProductIds);
+            }
+
+            if ($lowStockDateProductIds) {
+                $stockResource->updateLowStockDate($lowStockDateProductIds);
+            }
+        } catch (Exception $e) {
+            Mage::logException($e);
         }
-        Mage::getResourceSingleton('catalog/product_indexer_price')->reindexProductIds($productIds);
+
+        // reindex stock for all items
+        if ($productIds) {
+            $stockIndexProcess = Mage::getModel('index/process')->load('cataloginventory_stock', 'indexer_code');
+            if ($stockIndexProcess->getMode() === Mage_Index_Model_Process::MODE_REAL_TIME) {
+                $stockIndexProcess->lock();
+                try {
+                    Mage::getResourceSingleton('cataloginventory/indexer_stock')->reindexProducts($productIds);
+                    $stockIndexProcess->unlock();
+                } catch (Exception $e) {
+                    $stockIndexProcess->unlock();
+                    Mage::logException($e);
+                }
+            }
+        }
+
+        // price indexer is responsible for hiding out of stock products
+        if ($stockStatusProductIds && !Mage::helper('cataloginventory')->isShowOutOfStock()) {
+            $priceIndexProcess = Mage::getModel('index/process')->load('catalog_product_price', 'indexer_code');
+            if ($priceIndexProcess->getMode() === Mage_Index_Model_Process::MODE_REAL_TIME) {
+                $priceIndexProcess->lock();
+                try {
+                    Mage::getResourceSingleton('catalog/product_indexer_price')->reindexProductIds($stockStatusProductIds);
+                    $priceIndexProcess->unlock();
+                } catch (Exception $e) {
+                    $priceIndexProcess->unlock();
+                    Mage::logException($e);
+                }
+            }
+        }
 
         $this->_itemsForReindex = array(); // Clear list of remembered items - we don't need it anymore
 
@@ -1007,9 +1055,7 @@ class Mage_CatalogInventory_Model_Observer
      */
     public function reindexProductsMassAction($observer)
     {
-        Mage::getSingleton('index/indexer')->indexEvents(
-            Mage_Catalog_Model_Product::ENTITY, Mage_Index_Model_Event::TYPE_MASS_ACTION
-        );
+
     }
 
     /**
