@@ -267,17 +267,6 @@ class Mage_CatalogInventory_Model_Indexer_Stock extends Mage_Index_Model_Indexer
         $event->addNewData('reindex_stock', 1);
         $event->addNewData('product_id', $object->getProductId());
 
-        // Saving stock item without product object
-        // Register re-index price process if products out of stock hidden on Front-end
-        if (!Mage::helper('cataloginventory')->isShowOutOfStock() && !$object->getProduct()) {
-            $massObject = new Varien_Object();
-            $massObject->setAttributesData(array('force_reindex_required' => 1));
-            $massObject->setProductIds(array($object->getProductId()));
-            Mage::getSingleton('index/indexer')->logEvent(
-                $massObject, Mage_Catalog_Model_Product::ENTITY, Mage_Index_Model_Event::TYPE_MASS_ACTION
-            );
-        }
-
         return $this;
     }
 
