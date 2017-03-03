@@ -153,6 +153,17 @@ class Mage_Catalog_Model_Resource_Product_Indexer_Eav extends Mage_Catalog_Model
     }
 
     /**
+     * Process Product Mass Update
+     *
+     * @param Mage_Index_Model_Event $event
+     * @return Mage_Catalog_Model_Resource_Product_Indexer_Eav
+     */
+    public function cataloginventoryStockItemSave(Mage_Index_Model_Event $event)
+    {
+        return $this->catalogProductMassAction($event);
+    }
+
+    /**
      * Process Catalog Eav Attribute Save
      *
      * @param Mage_Index_Model_Event $event

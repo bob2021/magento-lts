@@ -58,6 +58,9 @@ class Mage_Catalog_Model_Product_Indexer_Eav extends Mage_Index_Model_Indexer_Ab
         ),
         Mage_Catalog_Model_Convert_Adapter_Product::ENTITY => array(
             Mage_Index_Model_Event::TYPE_SAVE
+        ),
+        Mage_CatalogInventory_Model_Stock_Item::ENTITY => array(
+            Mage_Index_Model_Event::TYPE_SAVE
         )
     );
 
@@ -130,7 +133,24 @@ class Mage_Catalog_Model_Product_Indexer_Eav extends Mage_Index_Model_Indexer_Ab
             }
         } else if ($entity == Mage_Catalog_Model_Convert_Adapter_Product::ENTITY) {
             $event->addNewData('catalog_product_eav_reindex_all', true);
+        } else if ($entity == Mage_CatalogInventory_Model_Stock_Item::ENTITY) {
+            $this->_registerStockItemSaveEvent($event);
         }
+    }
+
+    /**
+     * Register data required by stock item save process
+     *
+     * @param Mage_Index_Model_Event $event
+     */
+    protected function _registerStockItemSaveEvent(Mage_Index_Model_Event $event)
+    {
+        $object = $event->getDataObject();
+        if (!$object->getStockStatusReindex()) {
+            return;
+        }
+
+        $event->addNewData('reindex_eav_product_ids', array($object->getProductId()));
     }
 
     /**

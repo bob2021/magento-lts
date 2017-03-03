@@ -895,6 +895,12 @@ class Mage_CatalogInventory_Model_Stock_Item extends Mage_Core_Model_Abstract
         /** @var \Mage_Index_Model_Indexer $indexer */
         $indexer = Mage::getSingleton('index/indexer');
 
+        $this->setStockStatusReindex(
+            !$this->getProduct()
+            && $this->dataHasChangedFor('is_in_stock')
+            && Mage::helper('cataloginventory')->isShowOutOfStock()
+        );
+
         if ($this->_processIndexEvents) {
             $indexer->processEntityAction($this, self::ENTITY, Mage_Index_Model_Event::TYPE_SAVE);
         } else {

@@ -86,6 +86,9 @@ class Mage_CatalogSearch_Model_Indexer_Fulltext extends Mage_Index_Model_Indexer
         ),
         Mage_Catalog_Model_Category::ENTITY => array(
             Mage_Index_Model_Event::TYPE_SAVE
+        ),
+        Mage_CatalogInventory_Model_Stock_Item::ENTITY => array(
+            Mage_Index_Model_Event::TYPE_SAVE
         )
     );
 
@@ -221,6 +224,9 @@ class Mage_CatalogSearch_Model_Indexer_Fulltext extends Mage_Index_Model_Indexer
             case Mage_Catalog_Model_Category::ENTITY:
                 $this->_registerCatalogCategoryEvent($event);
                 break;
+            case Mage_CatalogInventory_Model_Stock_Item::ENTITY:
+                $this->_registerStockItemSaveEvent($event);
+                break;
         }
     }
 
@@ -319,6 +325,25 @@ class Mage_CatalogSearch_Model_Indexer_Fulltext extends Mage_Index_Model_Indexer
                 }
                 break;
         }
+
+        return $this;
+    }
+
+    /**
+     * Register data required by stock item process in event object
+     *
+     * @param Mage_Index_Model_Event $event
+     * @return Mage_CatalogSearch_Model_Indexer_Search
+     */
+    protected function _registerStockItemSaveEvent(Mage_Index_Model_Event $event)
+    {
+        $object = $event->getDataObject();
+        if (!$object->getStockStatusReindex()) {
+            return $this;
+        }
+
+        $event->addNewData('catalogsearch_force_reindex', true);
+        $event->addNewData('catalogsearch_product_ids', array($object->getProductId()));
 
         return $this;
     }

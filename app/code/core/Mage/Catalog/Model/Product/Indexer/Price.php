@@ -293,21 +293,12 @@ class Mage_Catalog_Model_Product_Indexer_Price extends Mage_Index_Model_Indexer_
      */
     protected function _registerStockItemSaveEvent(Mage_Index_Model_Event $event)
     {
-        if (Mage::helper('cataloginventory')->isShowOutOfStock()) {
+        $object = $event->getDataObject();
+        if (!$object->getStockStatusReindex()) {
             return;
         }
 
-        $stockItem = $event->getDataObject();
-
-        if ($stockItem->getProduct()) {
-            return;
-        }
-
-        if (!$stockItem->dataHasChangedFor('is_in_stock')) {
-            return;
-        }
-
-        $event->addNewData('reindex_price_product_ids', array($event->getDataObject()->getProductId()));
+        $event->addNewData('reindex_price_product_ids', array($object->getProductId()));
     }
 
     /**
